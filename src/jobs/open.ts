@@ -1,75 +1,85 @@
 import { readFile } from "fs/promises";
 import { existsSync } from "fs";
 import _fetch from "isomorphic-fetch";
-import { dirname, join } from "path";
+import { dirname, join, resolve } from "path";
 import replace from "string-replace-async";
 import validURL from "valid-url";
 
 import { Context, Next } from "../formatter";
 
 export default async (ctx: Context, next: Next) => {
-  const read = async (path: string): Promise<string | undefined> => {
-    // first we check if the path is a url.
-    if (validURL.isUri(path)) {
-      // if it is, we fetch the file and return the contents.
-      const response = await _fetch(path);
-      ctx.scratch.base = dirname(path);
-      return scan(await response.text());
+  const read = async (
+    requestedPath: string,
+    parentSource?: string,
+    activeSources = new Set<string>()
+  ): Promise<string | undefined> => {
+    let source: string | undefined;
+
+    if (validURL.isUri(requestedPath)) {
+      source = requestedPath;
+    } else if (parentSource && validURL.isUri(parentSource)) {
+      source = new URL(requestedPath, parentSource).toString();
+    } else {
+      const candidates = [
+        parentSource ? join(dirname(parentSource), requestedPath) : undefined,
+        ctx.path ? join(ctx.path, requestedPath) : undefined,
+        requestedPath,
+      ].filter((candidate): candidate is string => !!candidate);
+
+      source = candidates.find((candidate) => existsSync(candidate));
+      if (source) source = resolve(source);
     }
 
-    // if it's not, we check if it's a file. Open it and return the contents.
-    if (existsSync(join(ctx.path, path))) {
-      path = join(ctx.path, path);
-      ctx.scratch.base = dirname(path);
-      return scan(await readFile(path, "utf8"));
-    }
-
-    if (existsSync(path)) {
-      ctx.scratch.base = dirname(ctx.path);
-      return scan(await readFile(path, "utf8"));
-    }
-
-    // if the file path starts with a dot, or we resolve it relative to the current file.
-    if (
-      path.startsWith("./") ||
-      path.startsWith("/") ||
-      path.startsWith("../")
-    ) {
-      if (ctx.scratch.base) {
-        path = join(ctx.scratch.base, path);
-      } else {
-        path = join(ctx.path, path);
+    if (!source) {
+      if (
+        parentSource ||
+        requestedPath.startsWith("./") ||
+        requestedPath.startsWith("/") ||
+        requestedPath.startsWith("../")
+      ) {
+        throw new Error(`File not found: ${requestedPath}`);
       }
 
-      //if it's a file, open it and return the contents
-      if (existsSync(path)) {
-        ctx.scratch.base = dirname(path);
-        return scan(await readFile(path, "utf8"));
-      } else {
-        // if it's not, we check to see if it's a url.
-        if (validURL.isUri(path)) {
-          // if it is, we fetch the file and return the contents.
-          const response = await _fetch(path);
-          ctx.scratch.base = dirname(path);
-          return scan(await response.text());
+      return scan(requestedPath, undefined, activeSources);
+    }
+
+    if (activeSources.has(source)) {
+      throw new Error(`Circular include detected: ${source}`);
+    }
+
+    activeSources.add(source);
+    try {
+      if (validURL.isUri(source)) {
+        const response = await _fetch(source);
+        if (!response.ok) {
+          throw new Error(`Unable to fetch ${source}: HTTP ${response.status}`);
         }
+        return await scan(await response.text(), source, activeSources);
       }
 
-      // if it's not a file or a url, we return undefined.
-      throw new Error(`File not found: ${path}`);
+      return await scan(await readFile(source, "utf8"), source, activeSources);
+    } finally {
+      activeSources.delete(source);
     }
-
-    return scan(path);
   };
 
   // Scan for includes and open the the file.
-  async function scan(text: string) {
+  async function scan(
+    text: string,
+    currentSource?: string,
+    activeSources = new Set<string>()
+  ) {
     // Open files
     let results = await replace(
       text,
       /#file\s+?(.*)/gi,
       async (...args: string[]) => {
-        const res = (await read(args[1])) || "";
+        const res =
+          (await read(
+            args[1].trim(),
+            currentSource,
+            new Set(activeSources)
+          )) || "";
         if (res) {
           return (
             "\n-\n" +
@@ -90,7 +100,13 @@ export default async (ctx: Context, next: Next) => {
       results,
       /#include\s+(.*)/g,
       async (...args: string[]) => {
-        return (await read(args[1])) || "";
+        return (
+          (await read(
+            args[1].trim(),
+            currentSource,
+            new Set(activeSources)
+          )) || ""
+        );
       }
     );
   }
