@@ -98,7 +98,3 @@ export class Formatter {
 export const formatter = new Formatter();
 
 export { Next };
-
-// formatter
-//   .format("./tests/mocks/code.mu")
-//   .then((result) => console.log(result.data));
