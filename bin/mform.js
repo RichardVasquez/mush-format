@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
 const { program } = require("commander");
+const { version } = require("../package.json");
 
 program
-  .version("1.1.0")
+  .version(version)
   .description("A MUSHcode pre-processor.")
   .command("run <path>||<project>", "run a Project or file.")
   .alias("r")
