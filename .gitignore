@@ -6,3 +6,6 @@ yarn-error.log
 src/test.ts
 package-lock.json
 .tmp
+.idea
+local
+*.tgz
