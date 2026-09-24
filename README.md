@@ -4,6 +4,11 @@
 
 a Typescript library designed to take mushcode from something readable to something you can quote directly into your game. See the [Demo](https://format.ursamu.io)!
 
+This project is an independent continuation of MUSH Format 1.2.4, maintained
+by Richard Vasquez. It is not intended to remain compatible with later
+upstream releases. The original MIT-licensed work and attribution are retained
+in `LICENSES/MIT.txt`.
+
 **Table Of Contents**<br />
 [Installation](#install) <br/>
 [Usage](#usage) <br />
@@ -20,17 +25,17 @@ a Typescript library designed to take mushcode from something readable to someth
 with your preferred package manager, install the library into your project.
 
 ```
-npm i @digibear/mush-format
+npm i @penguinpark/mush-format
 
 or
 
-yarn add @digibear/mush-format
+yarn add @penguinpark/mush-format
 ```
 
 ## Usage
 
 ```JavaScript
-import { formatter } from "@digibear/mush-format";
+import { formatter } from "@penguinpark/mush-format";
 
 const code = `
 // This line won't render
@@ -50,7 +55,7 @@ Mush-format has a global command avaliable, `mform`. It's able to format a file 
 
 ### Basic Usage
 
-`npm i -g @digibear/mush-format` then `mform --help`
+`npm i -g @penguinpark/mush-format` then `mform --help`
 
 ```
 Usage: mform [options] [command]

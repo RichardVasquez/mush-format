@@ -1,5 +1,5 @@
 {
-  "name": "@digibear/mush-format",
+  "name": "@penguinpark/mush-format",
   "version": "1.2.4",
   "description": "A mush code pre-processor written in TypeScript",
   "main": "dist/formatter.js",
@@ -18,14 +18,17 @@
   "bin": {
     "mform": "./bin/mform.js"
   },
-  "author": "Lemuel L. Canady, Jr",
-  "license": "MIT",
+  "author": "Richard Vasquez",
+  "contributors": [
+    "Lemuel L. Canady, Jr"
+  ],
+  "license": "Apache-2.0",
   "repository": {
-    "url": "https://github.com/digibear-io/mush-format.git"
+    "url": "https://github.com/RichardVasquez/mush-format.git"
   },
-  "homepage": "https://github.com/Digibear-io/mush-format/blob/master/README.md",
+  "homepage": "https://github.com/RichardVasquez/mush-format#readme",
   "bugs": {
-    "url": "https://github.com/digibear-io/mush-format/issues/"
+    "url": "https://github.com/RichardVasquez/mush-format/issues/"
   },
   "scripts": {
     "build": "rm -rf ./dist && npx tsc -p ./tsconfig.json",
