@@ -1,6 +1,8 @@
 import { Context, Next } from "../formatter";
 
 export default (ctx: Context, next: Next) => {
+  ctx.scratch.current = ctx.scratch.current!.replace(/\r\n?/g, "\n");
+
   // compression 1
   ctx.scratch.current = ctx.scratch
     .current!.replace(/^\/\*[\s\S]*?\*\/[\s\S]*?$|([^:]|^)\/\/.*$/gm, "") // remove comments

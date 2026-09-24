@@ -10,10 +10,12 @@
     "preprocessor"
   ],
   "files": [
-    "dist/**/*.js ",
+    "dist/**/*.js",
     "bin/**/*.js",
     "dist/**/*.ts",
-    "mushformatter.jpg"
+    "mushformatter.jpg",
+    "LICENSES/**/*",
+    "NOTICE"
   ],
   "bin": {
     "mform": "./bin/mform.js"
@@ -31,9 +33,10 @@
     "url": "https://github.com/RichardVasquez/mush-format/issues/"
   },
   "scripts": {
-    "build": "rm -rf ./dist && npx tsc -p ./tsconfig.json",
+    "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
+    "build": "npm run clean && tsc -p ./tsconfig.json",
     "test": "jest",
-    "prepublish": "yarn build"
+    "prepack": "npm run build"
   },
   "dependencies": {
     "@types/node": "^17.0.42",
