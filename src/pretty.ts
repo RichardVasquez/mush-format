@@ -16,7 +16,7 @@ interface SwitchState {
 }
 
 /** Locate command-level switch separators, excluding nested function arguments. */
-function switchBreaks(line: string): Set<number> {
+function switchBreaks(line: string, pairs: Map<number, number>): Set<number> {
   const breaks = new Set<number>();
   const frames: string[] = [];
   const states = new Map<number, SwitchState>();
@@ -51,7 +51,7 @@ function switchBreaks(line: string): Set<number> {
       if (state.commas % 2 === 0) breaks.add(i + 1);
     }
 
-    if (closes[char]) {
+    if (closes[char] && pairs.has(i)) {
       frames.push(closes[char]);
       if (char === "{" && commandLevel) commandStart = i + 1;
     } else if (frames[frames.length - 1] === char) {
@@ -94,14 +94,21 @@ function layout(line: string, indent: number, width: number): string {
       i++;
     } else if (closes[char]) {
       openings.push({ index: i, close: closes[char] });
-    } else if (openings.length && openings[openings.length - 1].close === char) {
-      const opening = openings.pop()!;
-      pairs.set(opening.index, i);
+    } else if (/[)\]}]/.test(char)) {
+      let match = openings.length - 1;
+      while (match >= 0 && openings[match].close !== char) match--;
+      // A missing function ')' must not hide a closing ']' and every later
+      // command block. Recover the enclosing pair without changing the source.
+      if (match >= 0 && openings.slice(match + 1).every(opening => opening.close === ")")) {
+        const opening = openings[match];
+        openings.splice(match);
+        pairs.set(opening.index, i);
+      }
     }
   }
 
   const frames: Frame[] = [];
-  const switchLines = switchBreaks(line);
+  const switchLines = switchBreaks(line, pairs);
   let output = "";
   let pending = false;
   const depth = () => frames.filter(frame => frame.expanded).length + 1;
@@ -123,19 +130,19 @@ function layout(line: string, indent: number, width: number): string {
 
     // Preserve original spaces on the preceding line. The compressor strips
     // indentation, so moving those spaces onto the next line would lose them.
-    // Never promote text to a formatter directive or comment. Negative cases
+    // Never promote text to a formatter directive or comment. Negative/dbref cases
     // are safe: indented continuation lines are joined before dash processing.
     if (pending && !/[ \t]/.test(char)) {
-      if (!/^(?:#|\/\/|\/\*|@define\b|@debug\b)/i.test(line.slice(i))) {
+      if (!/^(?:\/\/|\/\*|@define\b|@debug\b)/i.test(line.slice(i))) {
         output += "\n" + " ".repeat(depth() * indent);
         broke = true;
       }
       pending = false;
     }
 
-    // Consecutive top-level expressions are easier to read on separate lines.
-    if (char === "[" && !frames.length && line[i - 1] === "]" && !broke) {
-      output += "\n" + " ".repeat(indent);
+    // Separate consecutive command-level expressions, including nested switches.
+    if (char === "[" && frames.every(frame => frame.close === "}") && line[i - 1] === "]" && !broke) {
+      output += "\n" + " ".repeat(depth() * indent);
     }
     output += char;
     if (char === "\\" || char === "%") {
@@ -143,7 +150,7 @@ function layout(line: string, indent: number, width: number): string {
       continue;
     }
 
-    if (closes[char]) {
+    if (closes[char] && pairs.has(i)) {
       const end = pairs.get(i);
       const commandBlock = char === "{" && frames.every(frame => frame.close === "}");
       const expanded = end !== undefined && end > i + 1 &&

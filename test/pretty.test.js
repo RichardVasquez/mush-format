@@ -11,6 +11,19 @@ const fixture = join(__dirname, "fixtures/spray.mu");
 const spray = readFileSync(fixture, "utf8").trimEnd();
 const unlayout = text => text.split("\n").map(line => line.trimStart()).join("");
 
+test("nested dbref switch cases start lines, even after a missing function parenthesis", async () => {
+  const fixture = readFileSync(join(__dirname, "fixtures/cmdtool.mu"), "utf8").trimEnd();
+  for (const input of [fixture, fixture.replace("u(E.FAIL.CMD.1,%q<trim>]", "u(E.FAIL.CMD.1,%q<trim>)]")]) {
+    const result = pretty(input);
+    assert.match(result, /\n        #\-1,\{\n            @switch/);
+    assert.match(result, /\n        #\-2,\{\n            @pemit/);
+    assert.match(result, /\n        \{\n            @switch/);
+    assert.match(result, /\[setq\(target,locate.*\]\n        \[%q<target>\]=\n/);
+    assert.equal(unlayout(result), input);
+    assert.equal((await formatter.format(result)).data, input);
+  }
+});
+
 test("IndexCards switch uses the requested test and case layout", async () => {
   const input = readFileSync(join(__dirname, "fixtures/indexcards.mu"), "utf8").trimEnd();
   const expected = [

@@ -181,6 +181,12 @@ formatter.format(`
 
 ## Formatting Rules
 
+**ASCII art caveat:** When compressing code, the formatter can interpret literal
+`//` in ASCII art as the start of a comment and remove the rest of that line.
+Handling this ambiguity is currently out of scope. Users should review ASCII
+art containing `//`, including art lines beginning with those characters, and
+check the formatted output before using it in their game.
+
 The rules of the game are pretty simple! If the first column of a line isn't a comment, space or newline, it interprets it as the beginning of a line. If your line begins with any of the above things, it'll be removed. An example:
 
 ```
