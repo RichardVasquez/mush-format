@@ -74,6 +74,42 @@ Commands:
   help [command]            display help for command
 ```
 
+### Pretty-printing compact code
+
+Use `mform pretty` to expand compact MUSHcode into indented code. It accepts a
+file or standard input and prints the result without modifying the input file:
+
+```sh
+mform pretty compact.mu
+cat compact.mu | mform pretty
+mform pretty compact.mu --output readable.mu --indent 4 --width 100
+```
+
+The library also exports a synchronous `pretty` function:
+
+```js
+const { pretty } = require('@penguinpark/mush-format');
+
+console.log(pretty('&HELLO #123=$hello:think Hello;think World'));
+// &HELLO #123=$hello:
+//     think Hello;
+//     think World
+```
+
+The printer tracks nested brackets, parentheses, braces, and backslash/percent
+escapes. It indents brace bodies, separates commands and consecutive expressions,
+and lays out `@switch` (including abbreviations such as `@swi` and modifiers such
+as `/now`) with its test expression and each case on separate lines. Commas in
+nested functions remain within those functions. It also expands bracketed
+expressions longer than `width` characters (100 by default).
+`width` is an expansion threshold, not a hard line-length limit. Original spaces
+are retained, including trailing spaces before an inserted line break.
+
+Input should be compact code, with one command or attribute per original line.
+For code produced by this formatter, formatting the pretty output back into a
+single line reproduces the compact input. This does not recover comments or the
+original layout, or validate code against a MUSH server dialect.
+
 ### Diffing
 
 `mform` has the ability to just print the differences between two runs of a file. A great tool if you're planning on adding formatting to your development toolchain. You can feed the run command a specific file, or an entire project.

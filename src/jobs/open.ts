@@ -112,7 +112,10 @@ export default async (ctx: Context, next: Next) => {
   }
 
   ctx.scratch.current = "";
-  ctx.scratch.current = await read(ctx.input);
+  // Multiline text and leading comments are inline code, not file paths.
+  // Keep include targets on the path-reading route, even when they start with /.
+  const inline = /[\r\n]/.test(ctx.input) || /^\/[/\*]/.test(ctx.input);
+  ctx.scratch.current = inline ? await scan(ctx.input) : await read(ctx.input);
   if (ctx.scratch.current) ctx.combined = ctx.scratch.current;
   ctx.scratch.data = ctx.scratch.current;
   next();

@@ -98,3 +98,4 @@ export class Formatter {
 export const formatter = new Formatter();
 
 export { Next };
+export { pretty, PrettyOptions } from "./pretty";

@@ -8,6 +8,7 @@ program
   .description("A MUSHcode pre-processor.")
   .command("run <path>||<project>", "run a Project or file.")
   .alias("r")
+  .command("pretty [path]", "Pretty-print compact MUSHcode from a file or stdin.")
   .command(
     "github <user>/<repo>[@branch][/<file or folder>/]",
     "Run a github repo."
