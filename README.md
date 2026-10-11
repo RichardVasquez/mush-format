@@ -100,7 +100,11 @@ The printer tracks nested brackets, parentheses, braces, and backslash/percent
 escapes. It indents brace bodies, separates commands and consecutive expressions,
 and lays out `@switch` (including abbreviations such as `@swi` and modifiers such
 as `/now`) with its test expression and each case on separate lines. Commas in
-nested functions remain within those functions. It also expands bracketed
+nested functions remain within those functions. It also expands
+`switch()` functions regardless of length: the test expression stays on the
+opening line, each test/result pair gets a line, and the default result gets its
+own line. Nested expressions and escaped commas do not split those pairs.
+It expands other bracketed
 expressions longer than `width` characters (100 by default).
 `width` is an expansion threshold, not a hard line-length limit. Original spaces
 are retained, including trailing spaces before an inserted line break.

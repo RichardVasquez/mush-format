@@ -11,6 +11,34 @@ const fixture = join(__dirname, "fixtures/spray.mu");
 const spray = readFileSync(fixture, "utf8").trimEnd();
 const unlayout = text => text.split("\n").map(line => line.trimStart()).join("");
 
+test("switch functions keep test/result pairs together and show the default", async () => {
+  const input = readFileSync(join(__dirname, "fixtures/columns.mu"), "utf8").trimEnd();
+  for (const width of [100, 1000]) {
+    const result = pretty(input, { width });
+    assert.ok(result.endsWith([
+      "    [switch(words(%0),",
+      "        1,{[%q<c1>]},",
+      "        2,{[%q<c1>][%q<c2>]},",
+      "        3,{[%q<c1>][%q<c2>][%q<c3>]},",
+      "        {}",
+      "    )]",
+    ].join("\n")));
+    assert.equal(unlayout(result), input);
+    assert.equal((await formatter.format(result)).data, input);
+  }
+});
+
+test("nested switch functions and escaped commas preserve argument boundaries", async () => {
+  const input = String.raw`think [SWITCH(cat(a,b),one\,two,{[switch(%0,1,yes,no)]},three,{[cat(c,d)]},{})]`;
+  const result = pretty(input);
+  assert.match(result, /SWITCH\(cat\(a,b\),\n/);
+  assert.match(result, /one\\,two,\{\[switch\(%0,\n/);
+  assert.match(result, /three,\{\[cat\(c,d\)\]\},\n/);
+  assert.equal(unlayout(result), input);
+  assert.equal((await formatter.format(result)).data, input);
+  assert.equal(pretty("think [myswitch(x,1,a)]"), "think [myswitch(x,1,a)]");
+});
+
 test("nested dbref switch cases start lines, even after a missing function parenthesis", async () => {
   const fixture = readFileSync(join(__dirname, "fixtures/cmdtool.mu"), "utf8").trimEnd();
   for (const input of [fixture, fixture.replace("u(E.FAIL.CMD.1,%q<trim>]", "u(E.FAIL.CMD.1,%q<trim>)]")]) {
@@ -29,9 +57,18 @@ test("IndexCards switch uses the requested test and case layout", async () => {
   const expected = [
     "&T.CHECK_BLOCK IndexCards=@switch/now ",
     "    [setq(has_data,hasattr([v(indexcards_reference)],data_%0))]",
-    "    [setq(data_id,switch(%q<has_data>,1,get([v(indexcards_reference)]/data_%0),))]",
-    "    [setq(is_owner,switch(%q<has_data>,1,eq(owner(%q<data_id>),owner(%0)),0))]",
-    "    [setq(answer,switch(%q<has_data>/%q<is_owner>,0/*,-1,1/0,-2,1))]%q<answer>=",
+    "    [setq(data_id,switch(%q<has_data>,",
+    "        1,get([v(indexcards_reference)]/data_%0),",
+    "    ))]",
+    "    [setq(is_owner,switch(%q<has_data>,",
+    "        1,eq(owner(%q<data_id>),owner(%0)),",
+    "        0",
+    "    ))]",
+    "    [setq(answer,switch(%q<has_data>/%q<is_owner>,",
+    "        0/*,-1,",
+    "        1/0,-2,",
+    "        1",
+    "    ))]%q<answer>=",
     "    1,{},",
     "    -1,{",
     "        &data_%0 [v(indexcards_reference)]=[setq(created,create(data_block_%0,10,t))]%q<created>;",
@@ -52,7 +89,7 @@ test("switch abbreviations, modifiers, and nested cases round-trip", async () =>
   for (const command of ["@sw", "@swi", "@swit", "@switc", "@switch", "@SWI/first", "@switch/now/all"]) {
     const input = `&TEST #1=$test:${command} [switch(v(x),a,b,c)]=1,{think one},-1,{think negative},2,{@swi x=a,{think nested},b,{think other}}, {think default}`;
     const result = pretty(input);
-    assert.match(result, /\n    \[switch\(v\(x\),a,b,c\)\]=\n    1,\{/);
+    assert.match(result, /\n    \[switch\(v\(x\),\n        a,b,\n        c\n    \)\]=\n    1,\{/);
     assert.match(result, /\n    -1,\{/);
     assert.match(result, /@swi \n        x=\n        a,\{/);
     assert.equal(unlayout(result), input);
@@ -67,7 +104,7 @@ test("unbraced switch results, escaped separators, and following commands", asyn
   assert.equal(unlayout(result), input);
   assert.equal((await formatter.format(result)).data, input);
   assert.equal(pretty("think @switch x=1,a,2,b"), "think @switch x=1,a,2,b");
-  assert.equal(pretty("think [switch(x,1,a,2,b)]"), "think [switch(x,1,a,2,b)]");
+  assert.equal(pretty("think [switch(x,1,a,2,b)]"), "think [switch(x,\n        1,a,\n        2,b\n    )]");
 });
 
 test("SPRAY gets indented command bodies and round-trips exactly", async () => {
@@ -84,7 +121,7 @@ test("SPRAY gets indented command bodies and round-trips exactly", async () => {
 test("long functions wrap arguments without splitting nested short functions", async () => {
   const input = "think [switch(v(foo),first,[cat(hello,world)],second,other)]";
   const result = pretty(input, { width: 30, indent: 2 });
-  assert.match(result, /first,\n/);
+  assert.match(result, /first,\[cat\(hello,world\)\],\n/);
   assert.match(result, /\[cat\(hello,world\)\]/);
   assert.equal(unlayout(result), input);
   assert.equal((await formatter.format(result)).data, input);

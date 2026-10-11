@@ -8,6 +8,8 @@ export interface PrettyOptions {
 interface Frame {
   close: string;
   expanded: boolean;
+  switchFunction?: boolean;
+  commas: number;
 }
 
 interface SwitchState {
@@ -153,14 +155,18 @@ function layout(line: string, indent: number, width: number): string {
     if (closes[char] && pairs.has(i)) {
       const end = pairs.get(i);
       const commandBlock = char === "{" && frames.every(frame => frame.close === "}");
+      const switchFunction = char === "(" && /(?:^|[^\w@])switch$/i.test(line.slice(0, i));
+      const switchWrapper = char === "[" && /^switch\(/i.test(line.slice(i + 1));
       const expanded = end !== undefined && end > i + 1 &&
-        (commandBlock || end - i + 1 > width);
-      frames.push({ close: closes[char], expanded });
-      if (expanded) pending = true;
+        (switchFunction || commandBlock || (!switchWrapper && end - i + 1 > width));
+      frames.push({ close: closes[char], expanded, switchFunction, commas: 0 });
+      // Keep switch(test, on the opening line; wrap complete test/result pairs.
+      if (expanded && !switchFunction) pending = true;
     } else if (char === ";" && frames.every(frame => frame.close === "}")) {
       pending = true;
     } else if (char === "," && top && top.expanded && top.close !== "}" && !closing) {
-      pending = true;
+      top.commas++;
+      if (!top.switchFunction || top.commas % 2 === 1) pending = true;
     } else if (char === "," && line[i - 1] === "}" && frames.every(frame => frame.close === "}")) {
       pending = true;
     } else if (char === ":" && trigger && !triggerEnded && !frames.length) {
